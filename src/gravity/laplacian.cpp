@@ -40,10 +40,12 @@ Laplacian::Laplacian(DataBlock *datain, std::array<LaplacianBoundaryType,3> left
   this->lbound = leftBound;
   this->rbound = rightBound;
 
-  isPeriodic = true;
+  isPeriodic = true; // is this ever used ? this is not selfgravity.isPeriodic
   for(int dir = 0 ; dir < 3 ; dir++) {
-    if(lbound[dir] != LaplacianBoundaryType::periodic) isPeriodic = false;
-    if(rbound[dir] != LaplacianBoundaryType::periodic) isPeriodic = false;
+    if(lbound[dir] != LaplacianBoundaryType::periodic
+                    && lbound[dir] != LaplacianBoundaryType::shearingbox) isPeriodic = false;
+    if(rbound[dir] != LaplacianBoundaryType::periodic
+                    && lbound[dir] != LaplacianBoundaryType::shearingbox) isPeriodic = false;
   }
 
   #ifdef WITH_MPI
