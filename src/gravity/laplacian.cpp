@@ -556,14 +556,13 @@ void Laplacian::EnforceBoundary(int dir, BoundarySide side, LaplacianBoundaryTyp
                 "Laplacian:: Shearing box boundary condition should only be used in IDIR"
                 );
 
-
               //localVar(k,j,i) = localVar(k,j,iref)+j; // this works
               if (eps <= 0) {
-                localVar(k,(j+m-1+ny)%ny,i) = (1+eps) * localVar(k,(j-1+ny)%ny,iref)
-                                              - eps*localVar(k,j,iref);
+                localVar(k,j,i) = (1+eps) * localVar(k,(j+ny-m)%ny,iref)
+                                              - eps*localVar(k,(j-m+1+ny)%ny,iref);
               } else {
-                localVar(k,(j+m+ny)%ny,i) = ((1-eps) * localVar(k,(j-1+ny)%ny,iref)
-                                              + eps*localVar(k,j,iref));
+                localVar(k,j,i) = ((1-eps) * localVar(k,(j-1+ny-m)%ny,iref)
+                                              + eps*localVar(k,(j-m+ny)%ny,iref));
               }
       });
       break;
