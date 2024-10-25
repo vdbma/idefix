@@ -12,6 +12,7 @@
 #include "laplacian.hpp"
 #include "selfGravity.hpp"
 #include "dataBlock.hpp"
+#include "fluid.hpp"
 
 
 Laplacian::Laplacian(DataBlock *datain, std::array<LaplacianBoundaryType,3> leftBound,
@@ -521,7 +522,52 @@ void Laplacian::EnforceBoundary(int dir, BoundarySide side, LaplacianBoundaryTyp
       });
       break;
     }
+    case shearingbox: {
+      const real S  = data->hydro->sbS;
 
+      // Box size
+      const real Lx = data->mygrid->xend[IDIR] - data->mygrid->xbeg[IDIR];
+      const real Ly = data->mygrid->xend[JDIR] - data->mygrid->xbeg[JDIR];
+
+      // total number of cells in y (active domain)
+      const int ny = data->mygrid->np_int[JDIR];
+      const real dy = Ly/ny;
+
+      // Compute offset in y modulo the box size
+      const real t = data->t;
+
+      const int sign=2*side-1;
+      const real sbVelocity = sign*S*Lx;
+      real dL = std::fmod(sbVelocity*t,Ly);
+
+      const int m = static_cast<int> (std::floor(dL/dy+HALF_F));
+
+      const real eps = dL - m *dy;
+
+      idefix_for("BoundaryShearingBox", kbeg, kend, jbeg, jend, ibeg, iend,
+            KOKKOS_LAMBDA (int k, int j, int i) {
+              int iref, jref, kref;
+              // This hack takes care of cases where we have more ghost zones than active zones
+
+              if(dir==IDIR)
+                iref = ighost + (i+ighost*(nxi-1))%nxi;
+              else
+                IDEFIX_ERROR(
+                "Laplacian:: Shearing box boundary condition should only be used in IDIR"
+                );
+
+
+              //localVar(k,j,i) = localVar(k,j,iref)+j; // this works
+              if (eps <= 0) {
+                localVar(k,(j+m-1+ny)%ny,i) = (1+eps) * localVar(k,(j-1+ny)%ny,iref)
+                                              - eps*localVar(k,j,iref);
+              } else {
+                localVar(k,(j+m+ny)%ny,i) = ((1-eps) * localVar(k,(j-1+ny)%ny,iref)
+                                              + eps*localVar(k,j,iref));
+              }
+      });
+      break;
+    }
     case userdef: {
       if(this->haveUserDefBoundary) {
         // Warning: unlike hydro userdef boundary functions, the selfGravity
